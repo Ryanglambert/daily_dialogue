@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 
 
 CUR_DIR = os.path.realpath(os.path.dirname(__file__))
@@ -69,6 +70,19 @@ def convs(dataset='train'):
         dial, act, emo = [_to_unicode(i) for i in (dial, act, emo)]
         for utterance in _parse_utterances(dial, act, emo, conv_id):
             yield utterance
+
+
+def make_df(convs):
+    # make a df
+    df = pd.DataFrame(convs, columns=['person', 'utter', 'act', 'emo', 'conv'])
+    persons = df['person'].tolist()
+    conv_ids = df['conv'].tolist()
+    # make multi index
+    index = pd.MultiIndex.from_tuples(list(zip(*[conv_ids, persons])))
+    df = df[['utter', 'act', 'emo']]
+    # give df a multi index!
+    df.index = index
+    return df
 
 
 if __name__ == '__main__':
