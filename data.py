@@ -73,15 +73,8 @@ def convs(dataset='train'):
 
 
 def make_df(convs):
-    # make a df
     df = pd.DataFrame(convs, columns=['person', 'utter', 'act', 'emo', 'conv'])
-    persons = df['person'].tolist()
-    conv_ids = df['conv'].tolist()
-    # make multi index
-    index = pd.MultiIndex.from_tuples(list(zip(*[conv_ids, persons])))
-    df = df[['utter', 'act', 'emo']]
-    # give df a multi index!
-    df.index = index
+    df.set_index(['conv', 'person'], inplace=True)
     return df
 
 
