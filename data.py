@@ -40,36 +40,35 @@ def _to_unicode(string):
     return str(string, 'utf-8')
 
 
+def _check_short(string):
+    if not len(string) > 0:
+        return None
+    return string
+
+
 def _parse_utterances(dial, act, emo, conv_id):
-    utters = dial.split('__eou__')
+    utters = dial.strip('\n').split('__eou__')
     acts = act.strip('\n').split(' ')
     emos = emo.strip('\n').split(' ')
 
-    conversation = []
+    # conversation = []
     first_speaker = True
     for utter, act, emo in zip(utters, acts, emos):
         speaker = 'person_a'
         if not first_speaker:
             speaker = 'person_b'
         first_speaker = not first_speaker
-        conversation.append((
-            speaker,
-            utter,
-            _decode_act(act),
-            _decode_emo(emo),
-            conv_id
-        ))
-
-    return conversation
+        utter = _check_short(utter)
+        if utter:
+            yield (speaker, utter, _decode_act(act), _decode_emo(emo), conv_id)
 
 
 def convs(dataset='train'):
     dials, acts, emos = _file_streams(dataset)
-    conversations = []
     for conv_id, (dial, act, emo) in enumerate(zip(dials, acts, emos)):
         dial, act, emo = [_to_unicode(i) for i in (dial, act, emo)]
-        conversations.append(_parse_utterances(dial, act, emo, conv_id))
-    return conversations
+        for utterance in _parse_utterances(dial, act, emo, conv_id):
+            yield utterance
 
 
 if __name__ == '__main__':
