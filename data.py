@@ -5,7 +5,9 @@ import pandas as pd
 CUR_DIR = os.path.realpath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(CUR_DIR, 'data')
 DATASETS = ['train', 'validation', 'test']
-TOPICS = {'1': 'ordinary_life', 2: 'school_life',
+TOPICS_FILE = os.path.join(DATA_DIR, 'dialogues_topic.txt')
+
+TOPICS = {'1': 'ordinary_life', '2': 'school_life',
           '3': 'culture_education', '4': 'attitude_emotion',
           '5': 'relationship', '6': 'tourism', '7': 'health',
           '8': 'work', '9': 'politics', '10': 'finance'}
@@ -14,8 +16,24 @@ EMOS = {'0': 'no_emotion', '1': 'anger', '2': 'disgust',
         '3': 'fear', '4': 'happiness', '5': 'sadness', '6': 'surprise'}
 
 
+def _topic_stream(dataset='train'):
+    assert dataset in DATASETS, '!!! MUST BE ONE OF: [{}] !!!'.format(' ,'.join(DATASETS))
+    key = {'train': (0, 11118),
+           'validation': (11118, 12118),
+           'test': (12118, 13118)}
+    subset = key[dataset]
+    start, end = subset
+    stream = open(TOPICS_FILE, 'rb').readlines()
+    return stream[start: end]
+
+
 def _decode_topic(tag):
-    return TOPICS.get(tag)
+    tag = tag.strip('\n')
+    stuff = TOPICS.get(tag)
+    if not stuff:
+        raise Exception(tag)
+    else:
+        return stuff
 
 
 def _decode_act(act):
@@ -47,7 +65,7 @@ def _check_short(string):
     return string
 
 
-def _parse_utterances(dial, act, emo, conv_id):
+def _parse_utterances(dial, act, emo):
     utters = dial.strip('\n').split('__eou__')
     acts = act.strip('\n').split(' ')
     emos = emo.strip('\n').split(' ')
@@ -61,25 +79,43 @@ def _parse_utterances(dial, act, emo, conv_id):
         first_speaker = not first_speaker
         utter = _check_short(utter)
         if utter:
-            yield (speaker, utter, _decode_act(act), _decode_emo(emo), conv_id)
+            yield (speaker, utter, _decode_act(act), _decode_emo(emo))
 
 
-def convs(dataset='train'):
+def _get_convs(dataset='train'):
     dials, acts, emos = _file_streams(dataset)
-    for conv_id, (dial, act, emo) in enumerate(zip(dials, acts, emos)):
-        dial, act, emo = [_to_unicode(i) for i in (dial, act, emo)]
-        for utterance in _parse_utterances(dial, act, emo, conv_id):
-            yield utterance
+    topics = _topic_stream(dataset)
+    for conv_id, (dial, act, emo, topic) in enumerate(zip(dials, acts, emos, topics)):
+        dial, act, emo, topic = [_to_unicode(i) for i in (dial, act, emo, topic)]
+        topic = _decode_topic(topic)
+        for utterance in _parse_utterances(dial, act, emo):
+            yield utterance + (conv_id, topic)
 
 
-def make_df(convs):
-    df = pd.DataFrame(convs, columns=['person', 'utter', 'act', 'emo', 'conv'])
+def _make_df(convs):
+    df = pd.DataFrame(convs, columns=['person', 'utter', 'act', 'emo', 'conv', 'topic'])
     df.set_index(['conv', 'person'], inplace=True)
     return df
 
 
+def _data(dataset):
+    return _make_df(_get_convs(dataset))
+
+
+def train():
+    return _data('train')
+
+
+def validation():
+    return _data('validation')
+
+
+def test():
+    return _data('test')
+
+
 if __name__ == '__main__':
-    things = convs()
+    things = _get_convs()
     for i in things.__next__():
         print(i)
         print('\n')
