@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import pandas as pd
 import textblob
@@ -5,8 +6,7 @@ import textblob
 
 CUR_DIR = os.path.realpath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(CUR_DIR, 'data')
-DATASETS = ['train', 'validation', 'test']
-TOPICS_FILE = os.path.join(DATA_DIR, 'dialogues_topic.txt')
+DFPATH = os.path.join(DATA_DIR, '{}_data_frame.pkl')
 
 TOPICS = {'1': 'ordinary_life', '2': 'school_life',
           '3': 'culture_education', '4': 'attitude_emotion',
@@ -18,7 +18,8 @@ EMOS = {'0': 'no_emotion', '1': 'anger', '2': 'disgust',
 
 
 def _topic_stream():
-    return open(TOPICS_FILE, 'rb').readlines()
+    topics_file = os.path.join(DATA_DIR, 'dialogues_topic.txt')
+    return open(topics_file, 'rb').readlines()
 
 
 def _decode_topic(tag):
@@ -111,24 +112,30 @@ def _data():
     return _make_df(_get_convs())
 
 
-def train():
-
-    raise NotImplemented
-    # return _data('train')
-
-
-def validation():
-    raise NotImplemented
-    # return _data('validation')
+def _make_train_test_split(df, test_size=1000):
+    conv_ids = df.index.get_level_values(0).unique()
+    test_indices = np.random.choice(conv_ids, size=test_size, replace=False)
+    train_indices = np.setdiff1d(conv_ids, test_indices)
+    return df.loc[train_indices], df.loc[test_indices]
 
 
-def test():
-    raise NotImplemented
-    # return _data('test')
+def _make_pickles(df, dataset):
+    df.to_pickle(DFPATH.format(dataset))
 
 
-if __name__ == '__main__':
-    things = _get_convs()
-    for i in things.__next__():
-        print(i)
-        print('\n')
+def _read_pickle(dataset):
+    return pd.read_pickle(DFPATH.format(dataset))
+
+
+def get_data(test_size=1000, use_cached=False):
+    if use_cached:
+        print('Using Cached')
+        return _read_pickle('train'), _read_pickle('test')
+    else:
+        print('Not Using Cached')
+        data = _data()
+        train, test = _make_train_test_split(data)
+        _make_pickles(train, 'train')
+        _make_pickles(test, 'test')
+    return train, test
+
