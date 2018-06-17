@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import textblob
 
 
 CUR_DIR = os.path.realpath(os.path.dirname(__file__))
@@ -65,6 +66,12 @@ def _check_short(string):
     return string
 
 
+def _sentiment(string):
+    blob = textblob.TextBlob(string)
+    polarity, subjectivity = blob.sentiment
+    return polarity, subjectivity
+
+
 def _parse_utterances(dial, act, emo):
     utters = dial.strip('\n').split('__eou__')
     acts = act.strip('\n').split(' ')
@@ -79,7 +86,8 @@ def _parse_utterances(dial, act, emo):
         first_speaker = not first_speaker
         utter = _check_short(utter)
         if utter:
-            yield (speaker, utter, _decode_act(act), _decode_emo(emo))
+            polarity, subjectivity = _sentiment(utter)
+            yield (speaker, utter, _decode_act(act), _decode_emo(emo), polarity, subjectivity)
 
 
 def _get_convs(dataset='train'):
@@ -93,7 +101,15 @@ def _get_convs(dataset='train'):
 
 
 def _make_df(convs):
-    df = pd.DataFrame(convs, columns=['person', 'utter', 'act', 'emo', 'conv', 'topic'])
+    df = pd.DataFrame(convs,
+                      columns=['person',
+                               'utter',
+                               'act',
+                               'emo',
+                               'polarity',
+                               'subjectivity',
+                               'conv',
+                               'topic'])
     df.set_index(['conv', 'person'], inplace=True)
     return df
 
