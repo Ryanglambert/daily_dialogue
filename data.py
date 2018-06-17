@@ -110,7 +110,8 @@ def _make_df(convs):
                                'subjectivity',
                                'conv',
                                'topic'])
-    df.set_index(['conv', 'person'], inplace=True)
+    df.set_index(['conv'], inplace=True)
+    df.set_index([df.index, df.groupby(df.index).cumcount()], inplace=True)
     return df
 
 
