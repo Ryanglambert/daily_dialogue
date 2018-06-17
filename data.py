@@ -17,15 +17,8 @@ EMOS = {'0': 'no_emotion', '1': 'anger', '2': 'disgust',
         '3': 'fear', '4': 'happiness', '5': 'sadness', '6': 'surprise'}
 
 
-def _topic_stream(dataset='train'):
-    assert dataset in DATASETS, '!!! MUST BE ONE OF: [{}] !!!'.format(' ,'.join(DATASETS))
-    key = {'train': (0, 11118),
-           'validation': (11118, 12118),
-           'test': (12118, 13118)}
-    subset = key[dataset]
-    start, end = subset
-    stream = open(TOPICS_FILE, 'rb').readlines()
-    return stream[start: end]
+def _topic_stream():
+    return open(TOPICS_FILE, 'rb').readlines()
 
 
 def _decode_topic(tag):
@@ -45,12 +38,11 @@ def _decode_emo(emo):
     return EMOS.get(emo)
 
 
-def _file_streams(dataset='train'):
-    assert dataset in DATASETS, '!!! MUST BE ONE OF: [{}] !!!'.format(' ,'.join(DATASETS))
-    file_paths = ['dialogues_{}.txt',
-                  'dialogues_act_{}.txt',
-                  'dialogues_emotion_{}.txt']
-    file_paths = [os.path.join(DATA_DIR, dataset, i.format(dataset))
+def _file_streams():
+    file_paths = ['dialogues_text.txt',
+                  'dialogues_act.txt',
+                  'dialogues_emotion.txt']
+    file_paths = [os.path.join(DATA_DIR, i)
                   for i in file_paths]
     return [open(i, 'rb').readlines()
             for i in file_paths]
@@ -90,9 +82,9 @@ def _parse_utterances(dial, act, emo):
             yield (speaker, utter, _decode_act(act), _decode_emo(emo), polarity, subjectivity)
 
 
-def _get_convs(dataset='train'):
-    dials, acts, emos = _file_streams(dataset)
-    topics = _topic_stream(dataset)
+def _get_convs():
+    dials, acts, emos = _file_streams()
+    topics = _topic_stream()
     for conv_id, (dial, act, emo, topic) in enumerate(zip(dials, acts, emos, topics)):
         dial, act, emo, topic = [_to_unicode(i) for i in (dial, act, emo, topic)]
         topic = _decode_topic(topic)
@@ -115,20 +107,24 @@ def _make_df(convs):
     return df
 
 
-def _data(dataset):
-    return _make_df(_get_convs(dataset))
+def _data():
+    return _make_df(_get_convs())
 
 
 def train():
-    return _data('train')
+
+    raise NotImplemented
+    # return _data('train')
 
 
 def validation():
-    return _data('validation')
+    raise NotImplemented
+    # return _data('validation')
 
 
 def test():
-    return _data('test')
+    raise NotImplemented
+    # return _data('test')
 
 
 if __name__ == '__main__':
