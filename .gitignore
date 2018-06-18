@@ -1,5 +1,4 @@
 *.swp
-*.pkl
 *.zip
 .ipynb_checkpoints/
 data/
