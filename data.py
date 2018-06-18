@@ -93,6 +93,20 @@ def _get_convs():
             yield utterance + (conv_id, topic)
 
 
+def get_biggest_drawdown(s):
+    "returns the largest net decrease in sentiment"
+    i = np.argmax(np.maximum.accumulate(s) - s)
+    j = np.argmax(s[:i])
+    return s[i] - s[j]
+
+
+def get_biggest_drawup(s):
+    "returns the largest net increase in sentiment"
+    i = np.argmin(np.minimum.accumulate(s) - s)
+    j = np.argmin(s[:i])
+    return s[i] - s[j]
+
+
 def _make_df(convs):
     df = pd.DataFrame(convs,
                       columns=['person',
@@ -105,6 +119,21 @@ def _make_df(convs):
                                'topic'])
     df.set_index(['conv'], inplace=True)
     df.set_index([df.index, df.groupby(df.index).cumcount()], inplace=True)
+
+    df['change_in_polarity'] = df.groupby([df.index.get_level_values(0), 'person'])['polarity'].diff()
+    # heard utterance information
+    shift_list = ['utter', 'polarity', 'subjectivity', 'change_in_polarity', 'act', 'emo']
+    for label in shift_list:
+        df['heard_' + label] = df.groupby([df.index.get_level_values(0)])[label].shift()
+
+    df = pd.concat([df, pd.get_dummies(df[['heard_act', 'heard_emo', 'topic']])], axis=1)
+
+    # add biggest drawup and drawdown (largest change in a conversation)
+    df['biggest_drawup'] = df.groupby([df.index.get_level_values(0), 'person'])['polarity']\
+                             .transform(get_biggest_drawup)
+    df['biggest_drawdown'] = df.groupby([df.index.get_level_values(0), 'person'])['polarity']\
+                               .transform(get_biggest_drawdown)
+
     return df
 
 
